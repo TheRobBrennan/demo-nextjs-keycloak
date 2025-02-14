@@ -7,16 +7,10 @@ const authOptions: AuthOptions = {
   debug: true, // Enable debug logs
   providers: [
     KeycloakProvider({
-      clientId: process.env.KEYCLOAK_CLIENT_ID,
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
-      issuer: process.env.KEYCLOAK_ISSUER,
-      authorization: {
-        params: {
-          scope: "openid email profile",
-          response_type: "code",
-          grant_type: "authorization_code"
-        }
-      }
+      clientId: process.env.KEYCLOAK_CLIENT_ID!,
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
+      issuer: process.env.KEYCLOAK_ISSUER!,
+      authorization: { params: { scope: "openid email profile" } }
     })
   ],
   session: {
@@ -26,33 +20,28 @@ const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile) {
-        token.idToken = account.id_token
-        token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token
-        token.expiresAt = account.expires_at
-        const keycloakProfile = profile as {
-          realm_access?: { roles: string[] };
-          resource_access?: { [key: string]: { roles: string[] } };
+        return {
+          ...token,
+          idToken: account.id_token,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          expiresAt: account.expires_at,
+          roles: [
+            ...(profile.realm_access?.roles || []),
+            ...(profile.resource_access?.['nextjs']?.roles || [])
+          ]
         };
-        token.roles = [
-          ...(keycloakProfile.realm_access?.roles ?? []),
-          ...(keycloakProfile.resource_access?.['nextjs']?.roles ?? [])
-        ]
-        return token
       }
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken;
-      session.error = token.error;
-      session.roles = token.roles;
-      return session;
+      return {
+        ...session,
+        accessToken: token.accessToken,
+        error: token.error,
+        roles: token.roles
+      };
     }
-  },
-  pages: {
-    signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error',
   },
   events: {
     async signIn({ user, account, profile, isNewUser }) {
@@ -65,4 +54,4 @@ const authOptions: AuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST, authOptions };
+export { handler as GET, handler as POST };
