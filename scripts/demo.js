@@ -4,6 +4,7 @@ const path = require('path');
 const initializeKeycloak = require('./init-keycloak');
 const axios = require('axios');
 const prettyMilliseconds = require('pretty-ms').default;
+const notifier = require('node-notifier');
 
 async function createTunnel(port, name) {
     console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
@@ -94,6 +95,12 @@ async function createTunnel(port, name) {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 console.log('\n');
+
+                notifier.notify({
+                    title: 'Tunnel Creation Resuming',
+                    message: `Attempting tunnel creation for ${name} (attempt ${attempt + 2}/${maxRetries})`,
+                    sound: true
+                });
             }
         }
     }
