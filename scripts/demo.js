@@ -32,8 +32,8 @@ docker.on('close', async (code) => {
                 'concurrently',
                 '-n', 'keycloak-tunnel,nextjs-tunnel',
                 '-c', 'yellow,green',
-                'lt --port 8080 --subdomain tdr-keycloak --local-host localhost',
-                'lt --port 3000 --subdomain tdr-nextjs --local-host localhost'
+                'npx lt --port=8080 --subdomain=tdr-keycloak --local-host=localhost',
+                'npx lt --port=3000 --subdomain=tdr-nextjs --local-host=localhost'
             ], {
                 stdio: 'inherit',
                 shell: true
