@@ -66,8 +66,20 @@ async function initializeKeycloak(keycloakUrl) {
 
         // Create and configure users with roles
         const users = [
-            { username: 'sysadmin', password: 'sysadmin', roles: ['system-admin'] },
-            { username: 'researcher', password: 'researcher', roles: ['researcher'] }
+            {
+                username: 'sysadmin',
+                password: 'sysadmin',
+                roles: ['system-admin'],
+                firstName: 'Justasystem',
+                lastName: 'Administrator'
+            },
+            {
+                username: 'researcher',
+                password: 'researcher',
+                roles: ['researcher'],
+                firstName: 'Awellregarded',
+                lastName: 'Researcher'
+            }
         ];
 
         for (const user of users) {
@@ -77,6 +89,8 @@ async function initializeKeycloak(keycloakUrl) {
                 const createResponse = await axios.post(`${keycloakUrl}/admin/realms/tdr/users`, {
                     username: user.username,
                     enabled: true,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                     credentials: [{
                         type: 'password',
                         value: user.password,
