@@ -1,8 +1,6 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 const initializeKeycloak = require('./init-keycloak');
-const axios = require('axios');
 const prettyMilliseconds = require('pretty-ms').default;
 const notifier = require('node-notifier');
 
