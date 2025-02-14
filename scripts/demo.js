@@ -7,7 +7,7 @@ const axios = require('axios');
 async function createTunnel(port, name) {
     console.log(`Creating tunnel for ${name} (port ${port})...`);
 
-    const maxRetries = 5;
+    const maxRetries = 20;
     const baseDelay = 1000; // Start with 1 second delay
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
