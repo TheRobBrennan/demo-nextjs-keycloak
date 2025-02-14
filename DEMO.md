@@ -1,18 +1,28 @@
 # NextJS + Keycloak Demo Guide
 
+> ⚠️ **IMPORTANT: RATE LIMIT WARNING**
+> 
+> Cloudflare enforces strict rate limits on tunnel creation:
+> - Each tunnel attempt (success or failure) counts against your limit
+> - Once hit, cooldown period is typically 15-30 minutes
+> - Plan to start setup at least 30 minutes before any demo/presentation
+> - If rate limited, see "Backup Options" below
+> - Consider using local-only mode for development
+
 This guide walks through setting up and running the Next.js + Keycloak demo with external access using local tunnels.
 
 ## ⚠️ Important Notes About Tunnels
 
 Cloudflare has strict rate limits on tunnel creation:
 - 1 request per second per IP
-- Cooldown period may be required between attempts
+- Each failed attempt counts against your limit
+- Cooldown period required between attempts
 - May need to wait 15-30 minutes if rate limited
 
 ### Backup Options
 If tunnels aren't working:
 
-1. **Local-only Demo**
+1. **Local-only Demo** (Recommended for development)
    ```bash
    # Start services
    docker compose up -d
@@ -30,12 +40,14 @@ If tunnels aren't working:
      ngrok http 3000  # for Next.js
      ngrok http 8080  # for Keycloak
      ```
+   See [NGROK_SETUP.md](NGROK_SETUP.md) for detailed instructions.
 
 3. **Best Practices**
    - Start setup 30 minutes before demo time
    - Test tunnel creation early
    - Keep local-only demo ready as backup
    - Document both URLs when working
+   - Use local-only mode for development
 
 ## Quick Start
 
