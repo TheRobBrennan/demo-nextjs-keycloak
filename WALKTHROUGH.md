@@ -18,70 +18,58 @@ The system comes with two preconfigured users:
    - Roles: `researcher`
    - Use this account to test researcher-specific features
 
-## 1. Initial Keycloak Setup
+## 2. Initial Access
 
-First, let's verify and complete the Keycloak configuration:
+When you run `npm run demo`, the script will:
+1. Start the Docker containers
+2. Create secure tunnels and display their URLs
+3. Configure Keycloak automatically
+4. Start the Next.js application
 
-1. Access Keycloak admin console at https://tdr-keycloak.loca.lt/admin
-   - Username: `admin`
-   - Password: `admin`
+Take note of the URLs displayed in your console - they will be unique for each session.
 
-2. Select the "tdr" realm from the dropdown in the top-left corner
+## 3. Testing Authentication Flow
 
-3. Verify/Create roles:
-   - Go to "Roles" in the left sidebar
-   - Check if `system-admin` and `researcher` roles exist
-   - If either is missing:
-     * Click "Create role"
-     * Name: `system-admin` or `researcher`
-     * Description: (optional) "System Administrator Role" or "Researcher Role"
-     * Click "Save"
-
-4. Create a test user:
-   - Go to "Users" → "Add user"
-   - Username: `testuser`
-   - Email: `test@example.com`
-   - First Name: `Test`
-   - Last Name: `User`
-   - Click "Create"
-   
-5. Set user password:
-   - Go to "Credentials" tab
-   - Set password: `password123`
-   - Disable "Temporary" toggle
-   - Click "Save"
-
-6. Assign roles:
-   - Go to "Role mappings" tab
-   - Add both `system-admin` and `researcher` roles
-
-## 2. Testing Authentication Flow
-
-1. Visit the Next.js app at https://tdr-nextjs.loca.lt
+1. Visit the Next.js app URL shown in your console
 
 2. Click "Signin with keycloak"
    - You should be redirected to Keycloak login
-   - Login with testuser/password123
+   - Login with either `sysadmin/sysadmin` or `researcher/researcher`
 
 3. After successful login, you should see:
    - Your username
    - Your assigned roles
-   - Links to admin and researcher sections
+   - Links to role-specific sections
 
-## 3. Testing Role-Based Access
+## 4. Testing Role-Based Access
 
-1. Test Admin Access:
-   - Click "Go to Admin Dashboard"
-   - You should have access because of the `system-admin` role
-   - Remove the `system-admin` role in Keycloak and try again
-   - You should be redirected away
+1. Login as System Administrator (`sysadmin/sysadmin`)
+   - You should see the "Admin Dashboard" link
+   - Click it to access admin-only features
 
-2. Test Researcher Access:
-   - Click "Upload Research Files"
-   - Try uploading some test files
-   - Files will be saved in the `uploads/[username]` directory
+2. Logout and login as Researcher (`researcher/researcher`)
+   - You should see the "Upload Research Files" link
+   - Click it to access researcher-only features
 
-## 4. Testing Authentication Features
+## 5. Troubleshooting
+
+If you encounter issues:
+
+1. Check the console output for the correct URLs
+2. Ensure cloudflared is running properly
+3. Wait a few moments for the tunnels to stabilize
+4. If needed, restart the demo with `npm run demo:build`
+
+## 6. Cleanup
+
+When you're done:
+1. Press Ctrl+C to stop the application
+2. The script will automatically:
+   - Stop the tunnels
+   - Shut down Docker containers
+   - Clean up temporary files
+
+## 7. Testing Authentication Features
 
 1. Test Session Management:
    ```typescript:src/components/SessionGuard.tsx
@@ -97,7 +85,7 @@ First, let's verify and complete the Keycloak configuration:
      * Next.js application
      * Keycloak session
 
-## 5. Testing Protected Routes
+## 8. Testing Protected Routes
 
 1. Try accessing protected routes directly:
    - https://tdr-nextjs.loca.lt/private
@@ -109,7 +97,7 @@ First, let's verify and complete the Keycloak configuration:
    - Should be accessible without login
    - Should show login button when not authenticated
 
-## 6. Error Handling
+## 9. Error Handling
 
 1. Test Invalid Login:
    - Try logging in with incorrect credentials

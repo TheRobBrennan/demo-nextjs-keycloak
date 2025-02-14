@@ -1,112 +1,76 @@
-# Keycloak Setup Guide for Next.js Authentication
+# Manual Keycloak Setup Guide
 
-## 1. Create a New Realm
-1. Log into Keycloak Admin Console
+This guide explains how to manually configure Keycloak if you need to make changes to the default setup.
+
+## Prerequisites
+- Running Keycloak instance (via Docker)
+- Active cloudflared tunnels
+
+## 1. Access Admin Console
+1. Use the Keycloak URL displayed in your console
+2. Add `/admin` to the URL
+3. Login with:
+   - Username: `admin`
+   - Password: `admin`
+
+## 2. Create Realm
+1. Hover over "Master" in top-left
 2. Click "Create Realm"
-3. Name it (e.g., "tdr")
+3. Name: `tdr`
 4. Click "Create"
 
-## 2. Create Client
-1. Go to "Clients" in the left sidebar
-2. Click "Create client"
-3. Fill in the details:
-   ```
-   Client type: OpenID Connect
-   Client ID: nextjs
-   ```
-4. Click "Next"
-5. Configure client settings:
-   ```
-   Client authentication: ON
-   Authorization: OFF
-   ```
-6. Click "Next" and "Save"
+## 3. Create Client
+1. Go to "Clients" → "Create client"
+2. Client ID: `nextjs`
+3. Click "Next"
+4. Client authentication: ON
+5. Click "Save"
 
-## 3. Configure Client Settings
-1. Go to the "Settings" tab
-2. Update the following:
-   ```
-   Root URL: http://localhost:3000
-   Home URL: http://localhost:3000
-   Valid redirect URIs: http://localhost:3000/api/auth/callback/keycloak
-   Valid post logout redirect URIs: http://localhost:3000
-   Web origins: http://localhost:3000
-   ```
-3. Click "Save"
-
-## 4. Configure Client Scopes
-1. Go to the "Client scopes" tab
-2. Verify these default scopes are present:
-   ```
-   roles
-   email
-   profile
-   web-origins
-   ```
-3. Click on "nextjs-dedicated" scope
-4. Go to "Mappers" tab
-5. Create new mapper:
-   ```
-   Name: client roles
-   Mapper type: User Client Role
-   Client ID: nextjs
-   Token Claim Name: resource_access.${client_id}.roles
-   Claim JSON Type: String
-   Add to ID token: ON
-   Add to access token: ON
-   Add to userinfo: ON
-   ```
+## 4. Configure Client
+1. Access type: `confidential`
+2. Valid redirect URIs: Add your Next.js URL (from console) + `/*`
+3. Web origins: Add your Next.js URL
+4. Click "Save"
 
 ## 5. Create Roles
-1. Go to "Roles" in the left sidebar for realm roles
-   OR
-   Go to "Clients" → "nextjs" → "Roles" for client roles
-2. Click "Create role"
-3. Create desired roles (e.g., "system-admin")
+1. Go to "Realm roles"
+2. Create roles:
+   - `system-admin`
+   - `researcher`
 
-## 6. Create Test User
-1. Go to "Users" in the left sidebar
-2. Click "Add user"
-3. Fill in required fields:
-   ```
-   Username: testuser
-   Email: test@example.com
-   Email verified: ON
-   ```
-4. Click "Create"
-5. Go to "Credentials" tab
-6. Set password and disable temporary password
+## 6. Create Users
+1. Go to "Users" → "Add user"
+2. Required fields:
+   - Username
+   - Email
+   - First Name
+   - Last Name
+3. Click "Create"
 
-## 7. Assign Roles to User
-1. Go to "Users" → Select your user
-2. Go to "Role mappings" tab
-3. For realm roles:
-   - Select role from "Realm roles" dropdown
-   - Click "Assign"
-4. For client roles:
-   - Select "nextjs" from "Client roles" dropdown
-   - Select desired roles
-   - Click "Assign"
+## 7. Set User Password
+1. Go to "Credentials" tab
+2. Set password
+3. Temporary: OFF
+4. Click "Save"
 
-## 8. Get Client Credentials
-1. Go to "Clients" → "nextjs"
-2. Go to "Credentials" tab
-3. Copy the "Client secret"
+## 8. Assign Roles
+1. Go to "Role mappings"
+2. Add desired roles
 
 ## 9. Environment Variables
-Create `.env.local` in your Next.js project:
+Your .env.local will be created automatically with the correct URLs. If you need to modify it:
 
 ```sh
 KEYCLOAK_CLIENT_ID="nextjs"
 KEYCLOAK_CLIENT_SECRET="your-client-secret"
-KEYCLOAK_ISSUER="http://localhost:8080/realms/tdr"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-generated-secret" # Generate with: openssl rand -base64 32
+KEYCLOAK_ISSUER="your-keycloak-url/realms/tdr"
+NEXTAUTH_URL="your-nextjs-url"
+NEXTAUTH_SECRET="your-generated-secret"
 ```
 
-## Verification Steps
+## Verification
 1. Start your Next.js application
-2. Visit http://localhost:3000
+2. Visit your Next.js URL
 3. Click login
 4. You should be redirected to Keycloak
 5. After successful login, you should see your roles displayed
