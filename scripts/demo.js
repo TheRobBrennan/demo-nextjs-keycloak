@@ -7,19 +7,28 @@ const axios = require('axios');
 async function createTunnel(port, name) {
     console.log(`Creating tunnel for ${name} (port ${port})...`);
 
-    const maxRetries = 20;
-    const baseDelay = 1000; // Start with 1 second delay
+    const maxRetries = 10;
+    const baseDelay = 3000; // 3 seconds base delay
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
+            process.stdout.write(`\rAttempt ${attempt + 1}/${maxRetries} `);
             const tunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`]);
 
             // Create a promise that resolves with the tunnel URL
             const url = await new Promise((resolve, reject) => {
+                let dots = 0;
+                const loadingInterval = setInterval(() => {
+                    process.stdout.write('\r' + '⏳'.repeat(dots + 1));
+                    dots = (dots + 1) % 3;
+                }, 500);
+
                 tunnel.stdout.on('data', (data) => {
                     const output = data.toString();
                     const match = output.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
                     if (match) {
+                        clearInterval(loadingInterval);
+                        process.stdout.write('\n');
                         resolve({ tunnel, url: match[0] });
                     }
                 });
@@ -29,17 +38,19 @@ async function createTunnel(port, name) {
                 });
 
                 tunnel.on('close', (code) => {
+                    clearInterval(loadingInterval);
                     if (code !== 0) {
                         reject(new Error(`${name} tunnel exited with code ${code}`));
                     }
                 });
             });
 
-            console.log(`${name} tunnel created at ${url.url}`);
+            console.log(`✅ ${name} tunnel created at ${url.url}`);
             return url;
         } catch (error) {
-            const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
-            console.log(`Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${delay / 1000} seconds...`);
+            const delay = baseDelay * Math.pow(2, attempt);
+            const seconds = delay / 1000;
+            process.stdout.write(`\r❌ Failed. Waiting ${seconds}s before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
