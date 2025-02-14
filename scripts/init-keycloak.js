@@ -46,7 +46,7 @@ async function initializeKeycloak(keycloakUrl) {
 
         // Create roles
         console.log('Creating roles...');
-        const roles = ['sysadmin', 'researcher'];
+        const roles = ['system-admin', 'researcher'];
         for (const role of roles) {
             try {
                 await axios.post(`${keycloakUrl}/admin/realms/tdr/roles`, {
@@ -64,38 +64,32 @@ async function initializeKeycloak(keycloakUrl) {
             }
         }
 
-        // Create and configure users
+        // Create and configure users with roles
         const users = [
-            { username: 'sysadmin', roles: ['sysadmin'] },
-            { username: 'researcher', roles: ['researcher'] }
+            { username: 'sysadmin', password: 'sysadmin', roles: ['system-admin'] },
+            { username: 'researcher', password: 'researcher', roles: ['researcher'] }
         ];
 
         for (const user of users) {
             console.log(`Creating/updating ${user.username} user...`);
-
-            // Create or get user
             let userId;
             try {
                 const createResponse = await axios.post(`${keycloakUrl}/admin/realms/tdr/users`, {
                     username: user.username,
                     enabled: true,
-                    emailVerified: true,
                     credentials: [{
                         type: 'password',
-                        value: user.username,
+                        value: user.password,
                         temporary: false
                     }]
-                }, { headers, timeout: 5000 });
-
-                // Get location header for user ID
-                const locationHeader = createResponse.headers.location;
-                userId = locationHeader.split('/').pop();
+                }, { headers });
+                userId = createResponse.headers.location.split('/').pop();
             } catch (error) {
                 if (error.response?.status === 409) {
                     // User exists, get their ID
                     const usersResponse = await axios.get(
                         `${keycloakUrl}/admin/realms/tdr/users?username=${user.username}`,
-                        { headers, timeout: 5000 }
+                        { headers }
                     );
                     userId = usersResponse.data[0].id;
                 } else {
@@ -106,21 +100,20 @@ async function initializeKeycloak(keycloakUrl) {
             // Get all realm roles
             const rolesResponse = await axios.get(
                 `${keycloakUrl}/admin/realms/tdr/roles`,
-                { headers, timeout: 5000 }
+                { headers }
             );
 
-            // Filter to get just the roles we want to assign
-            const rolesToAssign = rolesResponse.data
-                .filter(role => user.roles.includes(role.name));
-
-            // Assign roles to user
-            if (rolesToAssign.length > 0) {
-                await axios.post(
-                    `${keycloakUrl}/admin/realms/tdr/users/${userId}/role-mappings/realm`,
-                    rolesToAssign,
-                    { headers, timeout: 5000 }
-                );
-                console.log(`Assigned roles ${user.roles.join(', ')} to ${user.username}`);
+            // Find and assign the specified roles
+            for (const roleName of user.roles) {
+                const role = rolesResponse.data.find(r => r.name === roleName);
+                if (role) {
+                    await axios.post(
+                        `${keycloakUrl}/admin/realms/tdr/users/${userId}/role-mappings/realm`,
+                        [role],
+                        { headers }
+                    );
+                    console.log(`Assigned ${roleName} role to ${user.username}`);
+                }
             }
         }
 

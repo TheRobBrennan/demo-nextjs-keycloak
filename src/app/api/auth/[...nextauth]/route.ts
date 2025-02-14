@@ -3,7 +3,7 @@ import { JWT } from "next-auth/jwt";
 import NextAuth from "next-auth/next";
 import KeycloakProvider from "next-auth/providers/keycloak";
 
-const authOptions: AuthOptions = {
+export const authOptions: AuthOptions = {
   debug: true, // Enable debug logs
   providers: [
     KeycloakProvider({
@@ -19,17 +19,17 @@ const authOptions: AuthOptions = {
   },
   callbacks: {
     async jwt({ token, account, profile }) {
+      // Initial sign in
       if (account && profile) {
+        // Decode the access token to get the roles
+        const accessToken = account.access_token;
+        const decodedToken = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+
         return {
           ...token,
-          idToken: account.id_token,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
-          expiresAt: account.expires_at,
-          roles: [
-            ...(profile.realm_access?.roles || []),
-            ...(profile.resource_access?.['nextjs']?.roles || [])
-          ]
+          roles: decodedToken.realm_access?.roles || []
         };
       }
       return token;
@@ -38,7 +38,6 @@ const authOptions: AuthOptions = {
       return {
         ...session,
         accessToken: token.accessToken,
-        error: token.error,
         roles: token.roles
       };
     }

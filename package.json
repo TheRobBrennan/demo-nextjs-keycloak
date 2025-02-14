@@ -14,7 +14,7 @@
     "lint": "next lint",
     "demo": "node scripts/demo.js",
     "demo:build": "node scripts/demo-build.js",
-    "demo:clean": "node scripts/demo-build.js --clean-only"
+    "demo:clean": "killall cloudflared || true && docker compose down -v && rm -f .env.local"
   },
   "dependencies": {
     "@types/node": "20.8.7",
