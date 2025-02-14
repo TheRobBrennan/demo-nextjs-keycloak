@@ -13,7 +13,8 @@
     "start": "next start",
     "lint": "next lint",
     "demo": "node scripts/demo.js",
-    "demo:build": "node scripts/demo-build.js"
+    "demo:build": "node scripts/demo-build.js",
+    "demo:clean": "node scripts/demo-build.js --clean-only"
   },
   "dependencies": {
     "@types/node": "20.8.7",
@@ -32,7 +33,6 @@
   },
   "devDependencies": {
     "axios": "^1.6.2",
-    "concurrently": "^8.2.2",
-    "localtunnel": "^2.0.2"
+    "concurrently": "^8.2.2"
   }
 }
