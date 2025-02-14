@@ -210,6 +210,8 @@ async function createRealmIfNotExists(token) {
 }
 
 async function createClientIfNotExists(token) {
+    const CLIENT_SECRET = "WlCaSt6E2EJUcyIDkq64DhOWfzGCqk8m"; // Matching our .env.local
+
     try {
         await axios.get(
             'https://tdr-keycloak.loca.lt/admin/realms/tdr/clients/nextjs',
@@ -219,7 +221,8 @@ async function createClientIfNotExists(token) {
         );
     } catch (error) {
         if (error.response?.status === 404) {
-            await axios.post(
+            // Create the client
+            const createResponse = await axios.post(
                 'https://tdr-keycloak.loca.lt/admin/realms/tdr/clients',
                 {
                     clientId: 'nextjs',
@@ -232,7 +235,8 @@ async function createClientIfNotExists(token) {
                     redirectUris: ['https://tdr-nextjs.loca.lt/api/auth/callback/keycloak'],
                     webOrigins: ['https://tdr-nextjs.loca.lt'],
                     rootUrl: 'https://tdr-nextjs.loca.lt',
-                    baseUrl: 'https://tdr-nextjs.loca.lt'
+                    baseUrl: 'https://tdr-nextjs.loca.lt',
+                    secret: CLIENT_SECRET  // Set the specific client secret
                 },
                 {
                     headers: {
