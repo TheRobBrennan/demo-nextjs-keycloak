@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { NextResponse } from 'next/server';
-import { readdir, readFile, stat } from 'fs/promises';
+import { readdir, readFile, stat, access } from 'fs/promises';
 import path from 'path';
 import { isSystemAdmin } from '@/utils/auth';
 
@@ -14,7 +14,21 @@ export async function GET() {
 
     try {
         const uploadsDir = path.join(process.cwd(), 'uploads');
+
+        // Check if uploads directory exists
+        try {
+            await access(uploadsDir);
+        } catch {
+            // Return empty array if directory doesn't exist yet
+            return NextResponse.json([]);
+        }
+
         const entries = await readdir(uploadsDir);
+
+        // If directory exists but is empty
+        if (entries.length === 0) {
+            return NextResponse.json([]);
+        }
 
         // Filter out non-directory entries and hidden files
         const users = await Promise.all(
