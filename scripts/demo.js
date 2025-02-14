@@ -186,12 +186,9 @@ async function main() {
     console.log('✅ All Docker services started successfully\n');
 
     // Add a small delay to ensure any lingering tunnels are fully cleaned up
-    console.log('\n🌐 TUNNEL SETUP\n' + '='.repeat(50));
-    console.log('Waiting for system to stabilize...');
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     try {
-        console.log('Creating secure tunnels...');
         const { url: keycloakUrl } = await createTunnel(8080, 'Keycloak');
         const { url: nextjsUrl } = await createTunnel(3000, 'NextJS');
 
