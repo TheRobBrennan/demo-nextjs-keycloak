@@ -7,13 +7,18 @@ const axios = require('axios');
 async function createTunnel(port, name) {
     console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
 
-    const maxRetries = 10;
-    const baseDelay = 3000;
+    const maxRetries = 15;
+    const baseDelay = 5000;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
             process.stdout.write(`\r🔄 Attempt ${attempt + 1}/${maxRetries}`);
-            const tunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`]);
+            const tunnel = spawn('cloudflared', [
+                'tunnel',
+                '--url',
+                `http://127.0.0.1:${port}`,
+                '--no-autoupdate'
+            ]);
 
             const url = await new Promise((resolve, reject) => {
                 let timer = 0;
@@ -25,7 +30,6 @@ async function createTunnel(port, name) {
                 tunnel.stderr.on('data', (data) => {
                     const error = data.toString();
 
-                    // Look for the URL in the formatted box
                     if (error.includes('Your quick Tunnel has been created!')) {
                         const urlMatch = error.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
                         if (urlMatch) {
@@ -36,13 +40,9 @@ async function createTunnel(port, name) {
                         }
                     }
 
-                    // Only log actual errors
-                    if (error.includes('ERR') && !error.includes('Thank you for trying')) {
-                        console.error(`\n❌ Tunnel error:`, error);
-                    }
-
                     if (error.includes('429 Too Many Requests')) {
                         clearInterval(loadingInterval);
+                        console.log('\n⚠️  Rate limit hit, cooling down...');
                         reject(new Error('Rate limit hit'));
                     }
                 });
@@ -63,15 +63,19 @@ async function createTunnel(port, name) {
             console.log(`✅ ${name} tunnel created at ${url.url}`);
             return url;
         } catch (error) {
-            const delay = baseDelay * Math.pow(2, attempt);
-            const seconds = delay / 1000;
-            process.stdout.write(`\r❌ Failed. Cooling down for ${seconds}s...`);
+            const delay = baseDelay * Math.pow(3, attempt);
+            const seconds = Math.ceil(delay / 1000);
 
-            for (let i = seconds; i > 0; i--) {
-                process.stdout.write(`\r⏰ ${i}s remaining...`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            if (attempt + 1 < maxRetries) {
+                console.log(`\n🕐 Cooling down for ${seconds}s (attempt ${attempt + 1}/${maxRetries})`);
+
+                // Show countdown
+                for (let i = seconds; i > 0; i--) {
+                    process.stdout.write(`\r⏰ ${i}s remaining...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                console.log('\n');
             }
-            console.log('');
         }
     }
 
