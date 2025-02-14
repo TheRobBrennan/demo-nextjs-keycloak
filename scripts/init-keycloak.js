@@ -35,8 +35,10 @@ async function initializeKeycloak(keycloakUrl, nextjsUrl) {
             standardFlowEnabled: true,
             frontchannelLogout: true,
             attributes: {
-                "post.logout.redirect.uris": "+",
-                "pkce.code.challenge.method": "S256"
+                "post.logout.redirect.uris": `${nextjsUrl}/*`,
+                "pkce.code.challenge.method": "S256",
+                "oauth2.device.authorization.grant.enabled": "true",
+                "oidc.ciba.grant.enabled": "false"
             },
             redirectUris: [
                 `${nextjsUrl}/*`,
