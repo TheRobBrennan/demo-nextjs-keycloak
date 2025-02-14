@@ -1,10 +1,36 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const initializeKeycloak = require('./init-keycloak');
-const prettyMs = (...args) => import('pretty-ms').then(mod => mod.default(...args));
+
+// Import pretty-ms properly
+let prettyMs;
+import('pretty-ms').then(module => {
+    prettyMs = module.default;
+});
+
+function createProgressBar(current, total, width = 35) {
+    const progress = Math.round((current / total) * width);
+    const bars = '█'.repeat(progress) + '▒'.repeat(width - progress);
+    const percent = Math.round((current / total) * 100).toString().padStart(3, ' ');
+    return `${bars} ${percent}%`;
+}
 
 async function createTunnel(port, name) {
-    console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
+    // Ensure prettyMs is loaded
+    if (!prettyMs) {
+        await import('pretty-ms').then(module => {
+            prettyMs = module.default;
+        });
+    }
+
+    const width = 45; // Standard width for all sections
+    console.log('\n🌐 TUNNEL SETUP');
+    console.log('═'.repeat(width));
+    console.log('Waiting for system to stabilize...');
+    console.log('Creating secure tunnels...\n');
+
+    console.log(`🎯 Target: ${name} (port ${port})`);
+    console.log('═'.repeat(width));
 
     const maxRetries = 15;
     const baseDelay = 15000;
@@ -19,14 +45,18 @@ async function createTunnel(port, name) {
 
         if (timeSinceLastTunnel < minimumGap) {
             const waitTime = minimumGap - timeSinceLastTunnel;
-            console.log(`\n⏳ Waiting ${await prettyMs(waitTime, timeFormatOptions)} before creating next tunnel...`);
+            console.log(`⏳ Initial cooldown: ${prettyMs(waitTime, timeFormatOptions)}`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            process.stdout.write(`\r🔄 Attempt ${attempt + 1}/${maxRetries}`);
+            console.log('\n┌' + '─'.repeat(width - 2) + '┐');
+            console.log(`│  📡 Attempt ${(attempt + 1).toString().padStart(2, '0')} of ${maxRetries}${' '.repeat(22)}│`);
+            console.log(`│  ${createProgressBar(attempt + 1, maxRetries)} │`);
+            console.log('└' + '─'.repeat(width - 2) + '┘');
+
             const tunnel = spawn('cloudflared', [
                 'tunnel',
                 '--url',
@@ -36,9 +66,10 @@ async function createTunnel(port, name) {
 
             const url = await new Promise((resolve, reject) => {
                 let timer = 0;
-                const loadingInterval = setInterval(async () => {
+                const loadingInterval = setInterval(() => {
                     timer++;
-                    process.stdout.write(`\r⏳ Waiting for tunnel... ${await prettyMs(timer * 1000, timeFormatOptions)}`);
+                    const dots = '.'.repeat(timer % 4);
+                    process.stdout.write(`\r  ⏳ Creating tunnel${dots.padEnd(3)} ${prettyMs(timer * 1000, timeFormatOptions)}`);
                 }, 1000);
 
                 tunnel.stderr.on('data', (data) => {
@@ -48,7 +79,7 @@ async function createTunnel(port, name) {
                         const urlMatch = error.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
                         if (urlMatch) {
                             clearInterval(loadingInterval);
-                            console.log(''); // Clean line
+                            console.log('\n  ✨ Tunnel created successfully!');
                             global.lastTunnelCreation = Date.now();
                             resolve({ tunnel, url: urlMatch[0] });
                             return;
@@ -57,7 +88,7 @@ async function createTunnel(port, name) {
 
                     if (error.includes('429 Too Many Requests')) {
                         clearInterval(loadingInterval);
-                        console.log('\n⚠️  Rate limit hit, cooling down...');
+                        console.log('\n  ⚠️  Rate limit detected');
                         reject(new Error('Rate limit hit'));
                     }
                 });
@@ -75,26 +106,33 @@ async function createTunnel(port, name) {
                 }, 30000);
             });
 
-            console.log(`✅ ${name} tunnel created at ${url.url}`);
+            console.log(`\n  🔗 URL: ${url.url}`);
+            console.log('═'.repeat(50));
             return url;
         } catch (error) {
             const delay = baseDelay * Math.pow(4, attempt);
 
             if (attempt + 1 < maxRetries) {
-                console.log(`\n🕐 Cooling down for ${await prettyMs(delay, timeFormatOptions)} (attempt ${attempt + 1}/${maxRetries})`);
+                console.log('\n  ⏳ Cooling down...');
+                console.log(`  📊 Progress: ${attempt + 1}/${maxRetries} attempts\n`);
 
-                // Show countdown
+                // Show countdown with progress bar
                 const startTime = Date.now();
                 const endTime = startTime + delay;
 
                 while (Date.now() < endTime) {
+                    const elapsed = Date.now() - startTime;
                     const remaining = endTime - Date.now();
-                    process.stdout.write(`\r⏰ ${await prettyMs(remaining, timeFormatOptions)} remaining...`);
+
+                    const progressBar = createProgressBar(elapsed, delay);
+                    const remainingTime = prettyMs(remaining, timeFormatOptions);
+                    process.stdout.clearLine(0);
+                    process.stdout.cursorTo(0);
+                    process.stdout.write(`  ${progressBar} ${remainingTime} remain`);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-                // Add a bell character when resuming
-                process.stdout.write('\u0007\n');
-                console.log('\n🔄 Resuming tunnel creation...');
+                console.log('\n');
+                process.stdout.write('\u0007'); // Bell sound
             }
         }
     }
