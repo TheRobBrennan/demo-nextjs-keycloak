@@ -20,7 +20,8 @@ async function createTunnel(port, name) {
         let buffer = '';
         tunnel.stdout.on('data', (data) => {
             buffer += data.toString();
-            if (buffer.includes('trycloudflare.com')) {
+            // Look for the URL announcement box in cloudflared output
+            if (buffer.includes('Your quick Tunnel has been created! Visit it at')) {
                 const match = buffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
                 if (match) {
                     const url = match[0];
@@ -30,15 +31,23 @@ async function createTunnel(port, name) {
             }
         });
 
-        tunnel.on('error', reject);
-        tunnel.on('exit', (code) => {
-            if (code !== 0) reject(new Error(`Tunnel exited with code ${code}`));
+        tunnel.on('error', (error) => {
+            console.error(`Tunnel error for ${name}:`, error);
+            reject(error);
         });
 
-        // Timeout after 30 seconds
+        tunnel.on('exit', (code) => {
+            if (code !== 0) {
+                console.error(`Tunnel exited with code ${code} for ${name}`);
+                reject(new Error(`Tunnel exited with code ${code}`));
+            }
+        });
+
+        // Timeout after 45 seconds
         setTimeout(() => {
+            console.error(`Timeout waiting for ${name} tunnel URL. Buffer contents:`, buffer);
             reject(new Error(`Timeout waiting for ${name} tunnel URL`));
-        }, 30000);
+        }, 45000);
     });
 
     return { tunnel, url };
