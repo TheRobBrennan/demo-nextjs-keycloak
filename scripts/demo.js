@@ -23,11 +23,11 @@ docker.on('close', (code) => {
     // Start all services using concurrently
     const services = spawn('npx', [
         'concurrently',
-        '-n', 'next,keycloak-tunnel,next-tunnel',
+        '-n', 'next,keycloak-tunnel,nextjs-tunnel',
         '-c', 'blue,yellow,green',
-        'NODE_OPTIONS=--dns-result-order=ipv4first next dev',
-        'lt --port 8080 --subdomain tdr-keycloak',
-        'lt --port 3000 --subdomain tdr-nextjs'
+        '"NODE_OPTIONS=--dns-result-order=ipv4first next dev"',
+        '"lt --port 8080 --subdomain tdr-keycloak"',
+        '"lt --port 3000 --subdomain tdr-nextjs"'
     ], {
         stdio: 'inherit',
         shell: true
