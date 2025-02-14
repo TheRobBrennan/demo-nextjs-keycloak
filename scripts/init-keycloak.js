@@ -56,20 +56,51 @@ async function initializeKeycloak() {
 }
 
 async function waitForKeycloak() {
+    console.log('Waiting for Keycloak container to start...');
+    // First wait for local Keycloak
+    await waitForPort('http://localhost:8080');
+
+    console.log('Waiting for Keycloak tunnel to be ready...');
+    // Then wait for tunnel
     const maxAttempts = 30;
     const delay = 2000;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
         try {
-            await axios.get('https://tdr-keycloak.loca.lt/health');
-            return;
+            const response = await axios.get('https://tdr-keycloak.loca.lt/health');
+            if (response.status === 200) {
+                console.log('Keycloak tunnel is ready!');
+                return;
+            }
         } catch (error) {
             attempts++;
+            console.log(`Attempt ${attempts}/${maxAttempts} - Waiting for tunnel...`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error('Keycloak failed to start');
+    throw new Error('Keycloak tunnel failed to start');
+}
+
+async function waitForPort(url) {
+    const maxAttempts = 30;
+    const delay = 2000;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+        try {
+            const response = await axios.get(url);
+            if (response.status === 200) {
+                console.log(`Service at ${url} is ready!`);
+                return;
+            }
+        } catch (error) {
+            attempts++;
+            console.log(`Attempt ${attempts}/${maxAttempts} - Waiting for ${url}...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+    throw new Error(`Service at ${url} failed to start`);
 }
 
 async function getAdminToken() {

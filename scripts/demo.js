@@ -21,6 +21,7 @@ docker.on('close', async (code) => {
         process.exit(1);
     }
 
+    console.log('Starting tunnels...');
     // Start tunnels first so Keycloak initialization can access them
     const services = spawn('npx', [
         'concurrently',
@@ -33,8 +34,9 @@ docker.on('close', async (code) => {
         shell: true
     });
 
-    // Wait for tunnels to be ready
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait a bit longer for tunnels to be ready
+    console.log('Waiting for tunnels to stabilize...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     try {
         // Initialize Keycloak with roles and users
