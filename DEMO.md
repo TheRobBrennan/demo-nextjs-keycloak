@@ -58,10 +58,14 @@ npm run demo
 ```
 
 This command will:
-- Set up required environment variables
+- Clean up any existing demo environment
+- Remove existing Docker containers and volumes
+- Clear previous tunnel connections
+- Set up fresh environment variables
 - Start Docker services (Keycloak and Postgres)
-- Launch Next.js development server
 - Create secure tunnels for external access
+- Configure Keycloak automatically
+- Launch Next.js development server
 
 ## Prerequisites
 

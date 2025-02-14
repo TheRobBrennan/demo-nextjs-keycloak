@@ -9,7 +9,9 @@ npm run demo
 ```
 
 This will automatically:
-- Set up the environment
+- Clean up any existing environment
+- Remove previous Docker containers and tunnels
+- Set up fresh environment variables
 - Start Docker containers (Keycloak + Postgres)
 - Create secure tunnels for external access
 - Configure Keycloak

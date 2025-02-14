@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "demo": "node scripts/demo.js",
+    "demo": "npm run demo:clean && node scripts/demo.js",
     "demo:build": "node scripts/demo-build.js",
     "demo:clean": "killall cloudflared || true && docker compose down -v && rm -f .env.local",
     "configure": "node scripts/configure-local.js"
