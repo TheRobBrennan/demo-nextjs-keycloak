@@ -2,7 +2,26 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const initializeKeycloak = require('./init-keycloak');
 const prettyMilliseconds = require('pretty-ms').default;
-const notifier = require('node-notifier');
+
+// Check if terminal-notifier is installed, if not, try to install it
+try {
+    execSync('which terminal-notifier');
+} catch (error) {
+    console.log('📱 Installing terminal-notifier...');
+    try {
+        execSync('brew install terminal-notifier');
+    } catch (brewError) {
+        console.log('⚠️  Could not install terminal-notifier. Notifications will be disabled.');
+    }
+}
+
+// Test notification using terminal-notifier directly
+try {
+    execSync('terminal-notifier -title "Tunnel Demo" -message "Starting tunnel creation process..." -sound default');
+    console.log('🔔 Test notification sent');
+} catch (error) {
+    console.log('⚠️  Could not send notification:', error.message);
+}
 
 async function createTunnel(port, name) {
     console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
@@ -49,7 +68,7 @@ async function createTunnel(port, name) {
                         const urlMatch = error.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
                         if (urlMatch) {
                             clearInterval(loadingInterval);
-                            console.log('');
+                            console.log(''); // Clean line
                             global.lastTunnelCreation = Date.now();
                             resolve({ tunnel, url: urlMatch[0] });
                             return;
@@ -84,6 +103,7 @@ async function createTunnel(port, name) {
             if (attempt + 1 < maxRetries) {
                 console.log(`\n🕐 Cooling down for ${prettyMilliseconds(delay, timeFormatOptions)} (attempt ${attempt + 1}/${maxRetries})`);
 
+                // Show countdown with bell character for audio feedback
                 const startTime = Date.now();
                 const endTime = startTime + delay;
 
@@ -92,13 +112,9 @@ async function createTunnel(port, name) {
                     process.stdout.write(`\r⏰ ${prettyMilliseconds(remaining, timeFormatOptions)} remaining...`);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-                console.log('\n');
-
-                notifier.notify({
-                    title: 'Tunnel Creation Resuming',
-                    message: `Attempting tunnel creation for ${name} (attempt ${attempt + 2}/${maxRetries})`,
-                    sound: true
-                });
+                // Add a bell character when resuming
+                process.stdout.write('\u0007\n');
+                console.log('\n🔄 Resuming tunnel creation...');
             }
         }
     }
