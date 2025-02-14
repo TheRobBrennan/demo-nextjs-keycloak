@@ -5,19 +5,19 @@ const initializeKeycloak = require('./init-keycloak');
 const axios = require('axios');
 
 async function createTunnel(port, name) {
-    console.log(`\n📡 Creating tunnel for ${name} (port ${port})...`);
+    console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
 
     const maxRetries = 10;
-    const baseDelay = 3000; // 3 seconds base delay
+    const baseDelay = 3000;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            console.log(`\n🔄 Attempt ${attempt + 1}/${maxRetries}`);
+            process.stdout.write(`\r🔄 Attempt ${attempt + 1}/${maxRetries}`);
             const tunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`]);
 
-            // Create a promise that resolves with the tunnel URL
             const url = await new Promise((resolve, reject) => {
                 let timer = 0;
+                let buffer = '';
                 const loadingInterval = setInterval(() => {
                     timer++;
                     process.stdout.write(`\r⏳ Waiting for tunnel... ${timer}s`);
@@ -25,48 +25,73 @@ async function createTunnel(port, name) {
 
                 tunnel.stdout.on('data', (data) => {
                     const output = data.toString();
-                    const match = output.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
-                    if (match) {
-                        clearInterval(loadingInterval);
-                        console.log('');
-                        resolve({ tunnel, url: match[0] });
+                    buffer += output;
+
+                    // Log raw output for debugging
+                    console.log('\nTunnel output:', output);
+
+                    // Try multiple patterns to match the URL
+                    const patterns = [
+                        /https:\/\/.*?\.trycloudflare\.com/,
+                        /\|(https:\/\/.*?\.trycloudflare\.com)\|/,
+                        /tunnel\.url=(https:\/\/.*?\.trycloudflare\.com)/,
+                        /https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/
+                    ];
+
+                    for (const pattern of patterns) {
+                        const match = buffer.match(pattern);
+                        if (match) {
+                            const url = match[1] || match[0];
+                            console.log('\nFound URL:', url);
+                            clearInterval(loadingInterval);
+                            resolve({ tunnel, url });
+                            return;
+                        }
                     }
                 });
 
                 tunnel.stderr.on('data', (data) => {
                     const error = data.toString();
+                    console.error(`\nTunnel error:`, error);
                     if (error.includes('429 Too Many Requests')) {
                         clearInterval(loadingInterval);
                         reject(new Error('Rate limit hit'));
                     }
-                    console.error(`${name}: ${error}`);
                 });
 
                 tunnel.on('close', (code) => {
                     clearInterval(loadingInterval);
+                    console.log(`\nTunnel process closed with code ${code}`);
                     if (code !== 0) {
                         reject(new Error(`${name} tunnel exited with code ${code}`));
                     }
                 });
+
+                // Add timeout
+                setTimeout(() => {
+                    clearInterval(loadingInterval);
+                    console.log('\nBuffer contents at timeout:', buffer);
+                    reject(new Error('Tunnel creation timeout'));
+                }, 30000);
             });
 
             console.log(`\n✅ ${name} tunnel created at ${url.url}`);
             return url;
         } catch (error) {
+            console.error(`\nError creating tunnel:`, error.message);
             const delay = baseDelay * Math.pow(2, attempt);
             const seconds = delay / 1000;
-            console.log(`\n❌ Failed. Cooling down for ${seconds}s...`);
+            process.stdout.write(`\r❌ Failed. Cooling down for ${seconds}s...`);
 
-            // Show countdown
             for (let i = seconds; i > 0; i--) {
                 process.stdout.write(`\r⏰ ${i}s remaining...`);
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
-            console.log('\n');
+            console.log('');
         }
     }
 
-    throw new Error(`\n💥 Failed to create tunnel for ${name} after ${maxRetries} attempts`);
+    throw new Error(`💥 Failed to create tunnel for ${name} after ${maxRetries} attempts`);
 }
 
 // Start Docker services
