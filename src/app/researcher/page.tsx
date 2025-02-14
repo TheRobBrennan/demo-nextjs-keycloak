@@ -1,9 +1,9 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../api/auth/[...nextauth]/route';
 import FileUpload from '@/components/FileUpload';
-import FileUploadStatus from '@/components/FileUploadStatus';
 import { isResearcher } from '@/utils/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 
 export default async function ResearcherDashboard() {
     const session = await getServerSession(authOptions);
@@ -21,6 +21,14 @@ export default async function ResearcherDashboard() {
 
             <div className="w-full max-w-2xl mx-auto">
                 <FileUpload />
+                <div className="mt-8 text-center">
+                    <Link
+                        href="/"
+                        className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    >
+                        Return Home
+                    </Link>
+                </div>
             </div>
         </div>
     );
