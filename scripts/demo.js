@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const initializeKeycloak = require('./init-keycloak');
+const axios = require('axios');
 
 async function createTunnel(port, name) {
     console.log(`Creating tunnel for ${name} (port ${port})...`);
@@ -9,20 +10,34 @@ async function createTunnel(port, name) {
     const tunnel = spawn('cloudflared', [
         'tunnel',
         '--url',
-        `http://localhost:${port}`
+        `http://localhost:${port}`,
+        '--metrics',
+        'localhost:808' + (port === 8080 ? '1' : '2')
     ], {
-        stdio: ['ignore', 'pipe', 'inherit']
+        stdio: ['ignore', 'pipe', 'pipe']
     });
 
-    // Get the assigned URL
+    // Get the assigned URL by checking the metrics endpoint
     const url = await new Promise((resolve, reject) => {
-        tunnel.stdout.on('data', (data) => {
-            const output = data.toString();
-            if (output.includes('| https://')) {
-                const url = output.match(/https:\/\/[^\s|]+/)[0];
-                console.log(`${name} tunnel created at: ${url}`);
-                resolve(url);
+        // Give cloudflared a moment to start
+        setTimeout(async () => {
+            try {
+                const response = await axios.get(`http://localhost:808${port === 8080 ? '1' : '2'}/metrics`);
+                const metrics = response.data;
+                const urlMatch = metrics.match(/tunnel_url="(https:\/\/[^"]+)"/);
+                if (urlMatch && urlMatch[1]) {
+                    console.log(`${name} tunnel created at: ${urlMatch[1]}`);
+                    resolve(urlMatch[1]);
+                } else {
+                    reject(new Error('Could not find tunnel URL in metrics'));
+                }
+            } catch (error) {
+                reject(error);
             }
+        }, 3000);
+
+        tunnel.stderr.on('data', (data) => {
+            console.error(`${name} tunnel error:`, data.toString());
         });
 
         tunnel.on('error', reject);
