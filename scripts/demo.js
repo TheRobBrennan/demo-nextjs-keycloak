@@ -10,40 +10,35 @@ async function createTunnel(port, name) {
     const tunnel = spawn('cloudflared', [
         'tunnel',
         '--url',
-        `http://localhost:${port}`,
-        '--metrics',
-        'localhost:808' + (port === 8080 ? '1' : '2')
+        `http://localhost:${port}`
     ], {
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'inherit']
     });
 
-    // Get the assigned URL by checking the metrics endpoint
+    // Get the assigned URL
     const url = await new Promise((resolve, reject) => {
-        // Give cloudflared a moment to start
-        setTimeout(async () => {
-            try {
-                const response = await axios.get(`http://localhost:808${port === 8080 ? '1' : '2'}/metrics`);
-                const metrics = response.data;
-                const urlMatch = metrics.match(/tunnel_url="(https:\/\/[^"]+)"/);
-                if (urlMatch && urlMatch[1]) {
-                    console.log(`${name} tunnel created at: ${urlMatch[1]}`);
-                    resolve(urlMatch[1]);
-                } else {
-                    reject(new Error('Could not find tunnel URL in metrics'));
+        let buffer = '';
+        tunnel.stdout.on('data', (data) => {
+            buffer += data.toString();
+            if (buffer.includes('trycloudflare.com')) {
+                const match = buffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+                if (match) {
+                    const url = match[0];
+                    console.log(`${name} tunnel created at: ${url}`);
+                    resolve(url);
                 }
-            } catch (error) {
-                reject(error);
             }
-        }, 3000);
-
-        tunnel.stderr.on('data', (data) => {
-            console.error(`${name} tunnel error:`, data.toString());
         });
 
         tunnel.on('error', reject);
         tunnel.on('exit', (code) => {
             if (code !== 0) reject(new Error(`Tunnel exited with code ${code}`));
         });
+
+        // Timeout after 30 seconds
+        setTimeout(() => {
+            reject(new Error(`Timeout waiting for ${name} tunnel URL`));
+        }, 30000);
     });
 
     return { tunnel, url };
