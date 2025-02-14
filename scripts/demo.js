@@ -104,7 +104,7 @@ NEXTAUTH_SECRET="uCWzOXQaEtWX7XfzPrJG2Q74DtDcL828+h5N03n10fA="`;
 
         // Initialize Keycloak with the dynamic URL
         console.log('Initializing Keycloak...');
-        await initializeKeycloak(keycloakUrl);
+        await initializeKeycloak(keycloakUrl, nextjsUrl);
 
         // Start Next.js development server
         console.log('Starting Next.js...');

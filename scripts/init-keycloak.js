@@ -1,7 +1,7 @@
 const axios = require('axios');
 const qs = require('querystring');
 
-async function initializeKeycloak(keycloakUrl) {
+async function initializeKeycloak(keycloakUrl, nextjsUrl) {
     try {
         // Get initial token and wait for Keycloak to be ready
         const token = await waitForKeycloak(keycloakUrl);
@@ -26,27 +26,29 @@ async function initializeKeycloak(keycloakUrl) {
 
         // Create client if it doesn't exist
         console.log('Creating client...');
+        const clientConfig = {
+            clientId: 'nextjs',
+            protocol: 'openid-connect',
+            publicClient: false,
+            authorizationServicesEnabled: true,
+            serviceAccountsEnabled: true,
+            standardFlowEnabled: true,
+            frontchannelLogout: true,
+            backchannelLogout: false,
+            attributes: {
+                "post.logout.redirect.uris": "+",
+                "pkce.code.challenge.method": "S256"
+            },
+            redirectUris: [
+                `${nextjsUrl}/*`,
+                `${nextjsUrl}/api/auth/callback/keycloak`,
+                `${nextjsUrl}/`
+            ],
+            webOrigins: [nextjsUrl]
+        };
+
         try {
-            await axios.post(`${keycloakUrl}/admin/realms/tdr/clients`, {
-                clientId: 'nextjs',
-                protocol: 'openid-connect',
-                publicClient: false,
-                authorizationServicesEnabled: true,
-                serviceAccountsEnabled: true,
-                standardFlowEnabled: true,
-                frontchannelLogout: true,
-                backchannelLogout: false,
-                attributes: {
-                    "post.logout.redirect.uris": "+",
-                    "pkce.code.challenge.method": "S256"
-                },
-                redirectUris: [
-                    `${nextjsUrl}/*`,
-                    `${nextjsUrl}/api/auth/callback/keycloak`,
-                    `${nextjsUrl}/`
-                ],
-                webOrigins: [nextjsUrl]
-            }, { headers, timeout: 5000 });
+            await axios.post(`${keycloakUrl}/admin/realms/tdr/clients`, clientConfig, { headers, timeout: 5000 });
         } catch (error) {
             if (error.response?.status !== 409) { // 409 means client already exists
                 throw error;
