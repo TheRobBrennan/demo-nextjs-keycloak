@@ -30,13 +30,22 @@ async function initializeKeycloak(keycloakUrl) {
             await axios.post(`${keycloakUrl}/admin/realms/tdr/clients`, {
                 clientId: 'nextjs',
                 protocol: 'openid-connect',
-                publicClient: true,
+                publicClient: false,
+                authorizationServicesEnabled: true,
+                serviceAccountsEnabled: true,
                 standardFlowEnabled: true,
-                implicitFlowEnabled: false,
-                directAccessGrantsEnabled: true,
-                serviceAccountsEnabled: false,
-                redirectUris: ['*'],
-                webOrigins: ['*']
+                frontchannelLogout: true,
+                backchannelLogout: false,
+                attributes: {
+                    "post.logout.redirect.uris": "+",
+                    "pkce.code.challenge.method": "S256"
+                },
+                redirectUris: [
+                    `${nextjsUrl}/*`,
+                    `${nextjsUrl}/api/auth/callback/keycloak`,
+                    `${nextjsUrl}/`
+                ],
+                webOrigins: [nextjsUrl]
             }, { headers, timeout: 5000 });
         } catch (error) {
             if (error.response?.status !== 409) { // 409 means client already exists
