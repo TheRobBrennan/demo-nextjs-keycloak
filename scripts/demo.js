@@ -20,7 +20,7 @@ async function createTunnel(port, name) {
                 let timer = 0;
                 const loadingInterval = setInterval(() => {
                     timer++;
-                    console.log(`\n⏳ Waiting for tunnel... ${timer}s`);
+                    process.stdout.write(`\r⏳ Waiting for tunnel... ${timer}s`);
                 }, 1000);
 
                 tunnel.stdout.on('data', (data) => {
@@ -28,6 +28,7 @@ async function createTunnel(port, name) {
                     const match = output.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
                     if (match) {
                         clearInterval(loadingInterval);
+                        console.log('');
                         resolve({ tunnel, url: match[0] });
                     }
                 });
