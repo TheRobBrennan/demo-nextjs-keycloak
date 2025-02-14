@@ -3,12 +3,19 @@ const fs = require('fs');
 const path = require('path');
 const initializeKeycloak = require('./init-keycloak');
 const axios = require('axios');
+const prettyMilliseconds = require('pretty-ms').default;
 
 async function createTunnel(port, name) {
     console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
 
     const maxRetries = 15;
     const baseDelay = 5000;
+
+    // Options for pretty-ms to round to seconds
+    const timeFormatOptions = {
+        secondsDecimalDigits: 0,
+        millisecondsDecimalDigits: 0
+    };
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -24,7 +31,7 @@ async function createTunnel(port, name) {
                 let timer = 0;
                 const loadingInterval = setInterval(() => {
                     timer++;
-                    process.stdout.write(`\r⏳ Waiting for tunnel... ${timer}s`);
+                    process.stdout.write(`\r⏳ Waiting for tunnel... ${prettyMilliseconds(timer * 1000, timeFormatOptions)}`);
                 }, 1000);
 
                 tunnel.stderr.on('data', (data) => {
@@ -64,14 +71,17 @@ async function createTunnel(port, name) {
             return url;
         } catch (error) {
             const delay = baseDelay * Math.pow(3, attempt);
-            const seconds = Math.ceil(delay / 1000);
 
             if (attempt + 1 < maxRetries) {
-                console.log(`\n🕐 Cooling down for ${seconds}s (attempt ${attempt + 1}/${maxRetries})`);
+                console.log(`\n🕐 Cooling down for ${prettyMilliseconds(delay, timeFormatOptions)} (attempt ${attempt + 1}/${maxRetries})`);
 
                 // Show countdown
-                for (let i = seconds; i > 0; i--) {
-                    process.stdout.write(`\r⏰ ${i}s remaining...`);
+                const startTime = Date.now();
+                const endTime = startTime + delay;
+
+                while (Date.now() < endTime) {
+                    const remaining = endTime - Date.now();
+                    process.stdout.write(`\r⏰ ${prettyMilliseconds(remaining, timeFormatOptions)} remaining...`);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 console.log('\n');
