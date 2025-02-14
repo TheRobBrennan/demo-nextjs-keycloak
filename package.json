@@ -30,6 +30,7 @@
     "typescript": "5.2.2"
   },
   "devDependencies": {
+    "axios": "^1.6.2",
     "concurrently": "^8.2.2",
     "localtunnel": "^2.0.2"
   }

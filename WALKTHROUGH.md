@@ -2,6 +2,22 @@
 
 After setting up the demo using the instructions in [DEMO.md](DEMO.md), this guide will walk you through testing and exploring the application's features.
 
+## 1. Default Users
+
+The system comes with two preconfigured users:
+
+1. System Administrator
+   - Username: `sysadmin`
+   - Password: `sysadmin`
+   - Roles: `system-admin`
+   - Use this account to access administrative features
+
+2. Researcher
+   - Username: `researcher`
+   - Password: `researcher`
+   - Roles: `researcher`
+   - Use this account to test researcher-specific features
+
 ## 1. Initial Keycloak Setup
 
 First, let's verify and complete the Keycloak configuration:
