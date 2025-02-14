@@ -9,45 +9,40 @@ async function createTunnel(port, name) {
 
     const tunnel = spawn('cloudflared', [
         'tunnel',
+        '--no-autoupdate',
         '--url',
         `http://localhost:${port}`
     ], {
-        stdio: ['ignore', 'pipe', 'inherit']
+        stdio: 'pipe'
     });
 
     // Get the assigned URL
     const url = await new Promise((resolve, reject) => {
-        let buffer = '';
         tunnel.stdout.on('data', (data) => {
-            buffer += data.toString();
-            // Look for the URL announcement box in cloudflared output
-            if (buffer.includes('Your quick Tunnel has been created! Visit it at')) {
-                const match = buffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
-                if (match) {
-                    const url = match[0];
-                    console.log(`${name} tunnel created at: ${url}`);
-                    resolve(url);
-                }
+            console.log(`${name}:`, data.toString());
+        });
+
+        tunnel.stderr.on('data', (data) => {
+            const output = data.toString();
+            console.log(`${name}:`, output);
+
+            // Look for the connection URL
+            const match = output.match(/(?<=\|\s+)https:\/\/[^\s]+/);
+            if (match) {
+                resolve(match[0]);
             }
         });
 
         tunnel.on('error', (error) => {
-            console.error(`Tunnel error for ${name}:`, error);
+            console.error(`${name} tunnel error:`, error);
             reject(error);
         });
 
         tunnel.on('exit', (code) => {
             if (code !== 0) {
-                console.error(`Tunnel exited with code ${code} for ${name}`);
-                reject(new Error(`Tunnel exited with code ${code}`));
+                reject(new Error(`${name} tunnel exited with code ${code}`));
             }
         });
-
-        // Timeout after 45 seconds
-        setTimeout(() => {
-            console.error(`Timeout waiting for ${name} tunnel URL. Buffer contents:`, buffer);
-            reject(new Error(`Timeout waiting for ${name} tunnel URL`));
-        }, 45000);
     });
 
     return { tunnel, url };

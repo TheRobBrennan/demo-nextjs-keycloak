@@ -3,81 +3,172 @@ const qs = require('querystring');
 
 async function initializeKeycloak(keycloakUrl) {
     try {
-        console.log('Waiting for Keycloak to be ready...');
-        await waitForKeycloak(keycloakUrl);
+        // Get initial token and wait for Keycloak to be ready
+        const token = await waitForKeycloak(keycloakUrl);
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
 
-        console.log('Getting admin token...');
-        const ADMIN_TOKEN = await getAdminToken(keycloakUrl);
-
-        // Create realm if it doesn't exist
+        // Create TDR realm if it doesn't exist
         console.log('Creating TDR realm...');
-        await createRealmIfNotExists(ADMIN_TOKEN, keycloakUrl);
+        try {
+            await axios.post(`${keycloakUrl}/admin/realms`, {
+                realm: 'tdr',
+                enabled: true,
+                displayName: 'TDR Realm'
+            }, { headers, timeout: 5000 });
+        } catch (error) {
+            if (error.response?.status !== 409) { // 409 means realm already exists
+                throw error;
+            }
+        }
 
         // Create client if it doesn't exist
-        console.log('Creating NextJS client...');
-        await createClientIfNotExists(ADMIN_TOKEN, keycloakUrl);
-
-        // Create roles if they don't exist
-        console.log('Creating roles...');
-        await createRoleIfNotExists('system-admin', ADMIN_TOKEN, keycloakUrl);
-        await createRoleIfNotExists('researcher', ADMIN_TOKEN, keycloakUrl);
-
-        // Create users if they don't exist
-        const users = [
-            {
-                username: 'sysadmin',
-                firstName: 'Justasystem',
-                lastName: 'Administrator',
-                email: 'sysadmin@mail.com',
-                password: 'sysadmin',
-                roles: ['system-admin']
-            },
-            {
-                username: 'researcher',
-                firstName: 'Awellregarded',
-                lastName: 'Researcher',
-                email: 'researcher@mail.com',
-                password: 'researcher',
-                roles: ['researcher']
+        console.log('Creating client...');
+        try {
+            await axios.post(`${keycloakUrl}/admin/realms/tdr/clients`, {
+                clientId: 'nextjs',
+                protocol: 'openid-connect',
+                publicClient: true,
+                standardFlowEnabled: true,
+                implicitFlowEnabled: false,
+                directAccessGrantsEnabled: true,
+                serviceAccountsEnabled: false,
+                redirectUris: ['*'],
+                webOrigins: ['*']
+            }, { headers, timeout: 5000 });
+        } catch (error) {
+            if (error.response?.status !== 409) { // 409 means client already exists
+                throw error;
             }
+        }
+
+        // Create roles
+        console.log('Creating roles...');
+        const roles = ['sysadmin', 'researcher'];
+        for (const role of roles) {
+            try {
+                await axios.post(`${keycloakUrl}/admin/realms/tdr/roles`, {
+                    name: role,
+                    description: `${role} role`,
+                    composite: false,
+                    clientRole: false
+                }, { headers, timeout: 5000 });
+                console.log(`Created ${role} role`);
+            } catch (error) {
+                if (error.response?.status !== 409) {
+                    throw error;
+                }
+                console.log(`${role} role already exists`);
+            }
+        }
+
+        // Create and configure users
+        const users = [
+            { username: 'sysadmin', roles: ['sysadmin'] },
+            { username: 'researcher', roles: ['researcher'] }
         ];
 
-        console.log('Creating users...');
         for (const user of users) {
-            await createUserIfNotExists(user, ADMIN_TOKEN, keycloakUrl);
+            console.log(`Creating/updating ${user.username} user...`);
+
+            // Create or get user
+            let userId;
+            try {
+                const createResponse = await axios.post(`${keycloakUrl}/admin/realms/tdr/users`, {
+                    username: user.username,
+                    enabled: true,
+                    emailVerified: true,
+                    credentials: [{
+                        type: 'password',
+                        value: user.username,
+                        temporary: false
+                    }]
+                }, { headers, timeout: 5000 });
+
+                // Get location header for user ID
+                const locationHeader = createResponse.headers.location;
+                userId = locationHeader.split('/').pop();
+            } catch (error) {
+                if (error.response?.status === 409) {
+                    // User exists, get their ID
+                    const usersResponse = await axios.get(
+                        `${keycloakUrl}/admin/realms/tdr/users?username=${user.username}`,
+                        { headers, timeout: 5000 }
+                    );
+                    userId = usersResponse.data[0].id;
+                } else {
+                    throw error;
+                }
+            }
+
+            // Get all realm roles
+            const rolesResponse = await axios.get(
+                `${keycloakUrl}/admin/realms/tdr/roles`,
+                { headers, timeout: 5000 }
+            );
+
+            // Filter to get just the roles we want to assign
+            const rolesToAssign = rolesResponse.data
+                .filter(role => user.roles.includes(role.name));
+
+            // Assign roles to user
+            if (rolesToAssign.length > 0) {
+                await axios.post(
+                    `${keycloakUrl}/admin/realms/tdr/users/${userId}/role-mappings/realm`,
+                    rolesToAssign,
+                    { headers, timeout: 5000 }
+                );
+                console.log(`Assigned roles ${user.roles.join(', ')} to ${user.username}`);
+            }
         }
 
         console.log('Keycloak initialization complete!');
     } catch (error) {
-        console.error('Failed to initialize Keycloak:', error.message);
-        process.exit(1);
+        console.error('Error initializing Keycloak:', error.response?.data || error.message);
+        throw error;
     }
 }
 
 async function waitForKeycloak(keycloakUrl) {
     console.log('Waiting for Keycloak container to start...');
-    // First wait for local Keycloak
-    await waitForPort('http://localhost:8080');
 
-    console.log('Waiting for Keycloak tunnel to be ready...');
-    const maxAttempts = 30;
-    const delay = 2000;
+    const maxAttempts = 60;
+    const delay = 3000;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
         try {
-            const response = await axios.get(`${keycloakUrl}/realms/master/protocol/openid-connect/auth`);
-            if (response.status === 200) {
-                console.log('Keycloak tunnel is ready!');
-                return;
+            console.log(`Attempt ${attempts + 1}/${maxAttempts} - Checking Keycloak status...`);
+
+            // Try to get the admin token as a test of readiness
+            const tokenResponse = await axios.post(
+                `${keycloakUrl}/realms/master/protocol/openid-connect/token`,
+                'grant_type=password&client_id=admin-cli&username=admin&password=admin',
+                {
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    timeout: 5000
+                }
+            );
+
+            if (tokenResponse.status === 200 && tokenResponse.data.access_token) {
+                console.log('Keycloak is ready!');
+                return tokenResponse.data.access_token;
             }
         } catch (error) {
             attempts++;
-            console.log(`Attempt ${attempts}/${maxAttempts} - Waiting for tunnel...`);
+            if (error.response) {
+                console.log(`Response status: ${error.response.status}`);
+            } else if (error.request) {
+                console.log('No response received');
+            } else {
+                console.log('Error:', error.message);
+            }
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    throw new Error('Keycloak tunnel failed to start');
+    throw new Error('Keycloak failed to start after maximum attempts');
 }
 
 async function waitForPort(url) {
