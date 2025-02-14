@@ -2,6 +2,41 @@
 
 This guide walks through setting up and running the Next.js + Keycloak demo with external access using local tunnels.
 
+## ⚠️ Important Notes About Tunnels
+
+Cloudflare has strict rate limits on tunnel creation:
+- 1 request per second per IP
+- Cooldown period may be required between attempts
+- May need to wait 15-30 minutes if rate limited
+
+### Backup Options
+If tunnels aren't working:
+
+1. **Local-only Demo**
+   ```bash
+   # Start services
+   docker compose up -d
+   npm run dev
+
+   # Access via:
+   - Next.js: http://localhost:3000
+   - Keycloak: http://localhost:8080
+   ```
+
+2. **Alternative Tunnel Service**
+   - Install ngrok: `npm install -g ngrok`
+   - Create tunnels:
+     ```bash
+     ngrok http 3000  # for Next.js
+     ngrok http 8080  # for Keycloak
+     ```
+
+3. **Best Practices**
+   - Start setup 30 minutes before demo time
+   - Test tunnel creation early
+   - Keep local-only demo ready as backup
+   - Document both URLs when working
+
 ## Quick Start
 
 If you want to get started immediately, run:
