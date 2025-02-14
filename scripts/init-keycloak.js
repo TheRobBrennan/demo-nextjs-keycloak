@@ -10,6 +10,14 @@ async function initializeKeycloak() {
         console.log('Getting admin token...');
         const ADMIN_TOKEN = await getAdminToken();
 
+        // Create realm if it doesn't exist
+        console.log('Creating TDR realm...');
+        await createRealmIfNotExists(ADMIN_TOKEN);
+
+        // Create client if it doesn't exist
+        console.log('Creating NextJS client...');
+        await createClientIfNotExists(ADMIN_TOKEN);
+
         // Create roles if they don't exist
         console.log('Creating roles...');
         await createRoleIfNotExists('system-admin', ADMIN_TOKEN);
@@ -170,6 +178,70 @@ async function createUserIfNotExists(userData, token) {
     } catch (error) {
         console.error(`Failed to create user ${userData.username}:`, error.message);
         throw error;
+    }
+}
+
+async function createRealmIfNotExists(token) {
+    try {
+        await axios.get(
+            'https://tdr-keycloak.loca.lt/admin/realms/tdr',
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
+    } catch (error) {
+        if (error.response?.status === 404) {
+            await axios.post(
+                'https://tdr-keycloak.loca.lt/admin/realms',
+                {
+                    realm: 'tdr',
+                    enabled: true,
+                    displayName: 'TDR Demo Realm'
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+        }
+    }
+}
+
+async function createClientIfNotExists(token) {
+    try {
+        await axios.get(
+            'https://tdr-keycloak.loca.lt/admin/realms/tdr/clients/nextjs',
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
+    } catch (error) {
+        if (error.response?.status === 404) {
+            await axios.post(
+                'https://tdr-keycloak.loca.lt/admin/realms/tdr/clients',
+                {
+                    clientId: 'nextjs',
+                    enabled: true,
+                    protocol: 'openid-connect',
+                    publicClient: false,
+                    authorizationServicesEnabled: false,
+                    serviceAccountsEnabled: false,
+                    standardFlowEnabled: true,
+                    redirectUris: ['https://tdr-nextjs.loca.lt/api/auth/callback/keycloak'],
+                    webOrigins: ['https://tdr-nextjs.loca.lt'],
+                    rootUrl: 'https://tdr-nextjs.loca.lt',
+                    baseUrl: 'https://tdr-nextjs.loca.lt'
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+        }
     }
 }
 
