@@ -27,24 +27,13 @@ async function createTunnel(port, name) {
                     const output = data.toString();
                     buffer += output;
 
-                    // Log raw output for debugging
-                    console.log('\nTunnel output:', output);
-
-                    // Try multiple patterns to match the URL
-                    const patterns = [
-                        /https:\/\/.*?\.trycloudflare\.com/,
-                        /\|(https:\/\/.*?\.trycloudflare\.com)\|/,
-                        /tunnel\.url=(https:\/\/.*?\.trycloudflare\.com)/,
-                        /https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/
-                    ];
-
-                    for (const pattern of patterns) {
-                        const match = buffer.match(pattern);
-                        if (match) {
-                            const url = match[1] || match[0];
-                            console.log('\nFound URL:', url);
+                    // Look for the specific format where URL is announced
+                    if (output.includes('Your quick Tunnel has been created!')) {
+                        const urlMatch = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+                        if (urlMatch) {
                             clearInterval(loadingInterval);
-                            resolve({ tunnel, url });
+                            console.log(''); // Clean line
+                            resolve({ tunnel, url: urlMatch[0] });
                             return;
                         }
                     }
@@ -52,7 +41,10 @@ async function createTunnel(port, name) {
 
                 tunnel.stderr.on('data', (data) => {
                     const error = data.toString();
-                    console.error(`\nTunnel error:`, error);
+                    // Only log actual errors, not info messages
+                    if (error.includes('ERR') || error.includes('error')) {
+                        console.error(`\n❌ Tunnel error:`, error);
+                    }
                     if (error.includes('429 Too Many Requests')) {
                         clearInterval(loadingInterval);
                         reject(new Error('Rate limit hit'));
@@ -61,7 +53,6 @@ async function createTunnel(port, name) {
 
                 tunnel.on('close', (code) => {
                     clearInterval(loadingInterval);
-                    console.log(`\nTunnel process closed with code ${code}`);
                     if (code !== 0) {
                         reject(new Error(`${name} tunnel exited with code ${code}`));
                     }
@@ -70,7 +61,6 @@ async function createTunnel(port, name) {
                 // Add timeout
                 setTimeout(() => {
                     clearInterval(loadingInterval);
-                    console.log('\nBuffer contents at timeout:', buffer);
                     reject(new Error('Tunnel creation timeout'));
                 }, 30000);
             });
@@ -78,7 +68,6 @@ async function createTunnel(port, name) {
             console.log(`\n✅ ${name} tunnel created at ${url.url}`);
             return url;
         } catch (error) {
-            console.error(`\nError creating tunnel:`, error.message);
             const delay = baseDelay * Math.pow(2, attempt);
             const seconds = delay / 1000;
             process.stdout.write(`\r❌ Failed. Cooling down for ${seconds}s...`);
