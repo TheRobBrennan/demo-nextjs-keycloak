@@ -20,12 +20,16 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
-        // Store the id_token for logout
+        // Decode the access token to get the roles
+        const accessToken = account.access_token!;
+        const decodedToken = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
+
         return {
           ...token,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
-          idToken: account.id_token
+          idToken: account.id_token,
+          roles: decodedToken.realm_access?.roles || []
         };
       }
       return token;
@@ -34,7 +38,8 @@ export const authOptions: AuthOptions = {
       return {
         ...session,
         accessToken: token.accessToken,
-        idToken: token.idToken
+        idToken: token.idToken,
+        roles: token.roles
       };
     }
   },
