@@ -1,27 +1,7 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const initializeKeycloak = require('./init-keycloak');
-const prettyMilliseconds = require('pretty-ms').default;
-
-// Check if terminal-notifier is installed, if not, try to install it
-try {
-    execSync('which terminal-notifier');
-} catch (error) {
-    console.log('📱 Installing terminal-notifier...');
-    try {
-        execSync('brew install terminal-notifier');
-    } catch (brewError) {
-        console.log('⚠️  Could not install terminal-notifier. Notifications will be disabled.');
-    }
-}
-
-// Test notification using terminal-notifier directly
-try {
-    execSync('terminal-notifier -title "Tunnel Demo" -message "Starting tunnel creation process..." -sound default');
-    console.log('🔔 Test notification sent');
-} catch (error) {
-    console.log('⚠️  Could not send notification:', error.message);
-}
+const prettyMs = require('pretty-ms');
 
 async function createTunnel(port, name) {
     console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
@@ -39,7 +19,7 @@ async function createTunnel(port, name) {
 
         if (timeSinceLastTunnel < minimumGap) {
             const waitTime = minimumGap - timeSinceLastTunnel;
-            console.log(`\n⏳ Waiting ${prettyMilliseconds(waitTime, timeFormatOptions)} before creating next tunnel...`);
+            console.log(`\n⏳ Waiting ${prettyMs(waitTime, timeFormatOptions)} before creating next tunnel...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
         }
     }
@@ -58,7 +38,7 @@ async function createTunnel(port, name) {
                 let timer = 0;
                 const loadingInterval = setInterval(() => {
                     timer++;
-                    process.stdout.write(`\r⏳ Waiting for tunnel... ${prettyMilliseconds(timer * 1000, timeFormatOptions)}`);
+                    process.stdout.write(`\r⏳ Waiting for tunnel... ${prettyMs(timer * 1000, timeFormatOptions)}`);
                 }, 1000);
 
                 tunnel.stderr.on('data', (data) => {
@@ -101,15 +81,15 @@ async function createTunnel(port, name) {
             const delay = baseDelay * Math.pow(4, attempt);
 
             if (attempt + 1 < maxRetries) {
-                console.log(`\n🕐 Cooling down for ${prettyMilliseconds(delay, timeFormatOptions)} (attempt ${attempt + 1}/${maxRetries})`);
+                console.log(`\n🕐 Cooling down for ${prettyMs(delay, timeFormatOptions)} (attempt ${attempt + 1}/${maxRetries})`);
 
-                // Show countdown with bell character for audio feedback
+                // Show countdown
                 const startTime = Date.now();
                 const endTime = startTime + delay;
 
                 while (Date.now() < endTime) {
                     const remaining = endTime - Date.now();
-                    process.stdout.write(`\r⏰ ${prettyMilliseconds(remaining, timeFormatOptions)} remaining...`);
+                    process.stdout.write(`\r⏰ ${prettyMs(remaining, timeFormatOptions)} remaining...`);
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 // Add a bell character when resuming
