@@ -1,27 +1,26 @@
 const axios = require('axios');
 const qs = require('querystring');
 
-async function initializeKeycloak() {
+async function initializeKeycloak(keycloakUrl) {
     try {
         console.log('Waiting for Keycloak to be ready...');
-        await waitForKeycloak();
+        await waitForKeycloak(keycloakUrl);
 
-        const KEYCLOAK_URL = 'https://tdr-keycloak.loca.lt';
         console.log('Getting admin token...');
-        const ADMIN_TOKEN = await getAdminToken();
+        const ADMIN_TOKEN = await getAdminToken(keycloakUrl);
 
         // Create realm if it doesn't exist
         console.log('Creating TDR realm...');
-        await createRealmIfNotExists(ADMIN_TOKEN);
+        await createRealmIfNotExists(ADMIN_TOKEN, keycloakUrl);
 
         // Create client if it doesn't exist
         console.log('Creating NextJS client...');
-        await createClientIfNotExists(ADMIN_TOKEN);
+        await createClientIfNotExists(ADMIN_TOKEN, keycloakUrl);
 
         // Create roles if they don't exist
         console.log('Creating roles...');
-        await createRoleIfNotExists('system-admin', ADMIN_TOKEN);
-        await createRoleIfNotExists('researcher', ADMIN_TOKEN);
+        await createRoleIfNotExists('system-admin', ADMIN_TOKEN, keycloakUrl);
+        await createRoleIfNotExists('researcher', ADMIN_TOKEN, keycloakUrl);
 
         // Create users if they don't exist
         const users = [
@@ -45,7 +44,7 @@ async function initializeKeycloak() {
 
         console.log('Creating users...');
         for (const user of users) {
-            await createUserIfNotExists(user, ADMIN_TOKEN);
+            await createUserIfNotExists(user, ADMIN_TOKEN, keycloakUrl);
         }
 
         console.log('Keycloak initialization complete!');
@@ -55,20 +54,19 @@ async function initializeKeycloak() {
     }
 }
 
-async function waitForKeycloak() {
+async function waitForKeycloak(keycloakUrl) {
     console.log('Waiting for Keycloak container to start...');
     // First wait for local Keycloak
     await waitForPort('http://localhost:8080');
 
     console.log('Waiting for Keycloak tunnel to be ready...');
-    // Then wait for tunnel using a known Keycloak endpoint
     const maxAttempts = 30;
     const delay = 2000;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
         try {
-            const response = await axios.get('https://tdr-keycloak.loca.lt/realms/master/protocol/openid-connect/auth');
+            const response = await axios.get(`${keycloakUrl}/realms/master/protocol/openid-connect/auth`);
             if (response.status === 200) {
                 console.log('Keycloak tunnel is ready!');
                 return;
@@ -103,9 +101,9 @@ async function waitForPort(url) {
     throw new Error(`Service at ${url} failed to start`);
 }
 
-async function getAdminToken() {
+async function getAdminToken(keycloakUrl) {
     const response = await axios.post(
-        'https://tdr-keycloak.loca.lt/realms/master/protocol/openid-connect/token',
+        `${keycloakUrl}/realms/master/protocol/openid-connect/token`,
         qs.stringify({
             grant_type: 'password',
             client_id: 'admin-cli',
@@ -121,10 +119,10 @@ async function getAdminToken() {
     return response.data.access_token;
 }
 
-async function createRoleIfNotExists(roleName, token) {
+async function createRoleIfNotExists(roleName, token, keycloakUrl) {
     try {
         await axios.get(
-            `https://tdr-keycloak.loca.lt/admin/realms/tdr/roles/${roleName}`,
+            `${keycloakUrl}/admin/realms/tdr/roles/${roleName}`,
             {
                 headers: { Authorization: `Bearer ${token}` }
             }
@@ -132,7 +130,7 @@ async function createRoleIfNotExists(roleName, token) {
     } catch (error) {
         if (error.response?.status === 404) {
             await axios.post(
-                'https://tdr-keycloak.loca.lt/admin/realms/tdr/roles',
+                `${keycloakUrl}/admin/realms/tdr/roles`,
                 {
                     name: roleName,
                     description: `${roleName} role`
@@ -148,11 +146,11 @@ async function createRoleIfNotExists(roleName, token) {
     }
 }
 
-async function createUserIfNotExists(userData, token) {
+async function createUserIfNotExists(userData, token, keycloakUrl) {
     try {
         // Check if user exists
         const response = await axios.get(
-            `https://tdr-keycloak.loca.lt/admin/realms/tdr/users?username=${userData.username}`,
+            `${keycloakUrl}/admin/realms/tdr/users?username=${userData.username}`,
             {
                 headers: { Authorization: `Bearer ${token}` }
             }
@@ -161,7 +159,7 @@ async function createUserIfNotExists(userData, token) {
         if (response.data.length === 0) {
             // Create user
             const createResponse = await axios.post(
-                'https://tdr-keycloak.loca.lt/admin/realms/tdr/users',
+                `${keycloakUrl}/admin/realms/tdr/users`,
                 {
                     username: userData.username,
                     firstName: userData.firstName,
@@ -188,14 +186,14 @@ async function createUserIfNotExists(userData, token) {
             // Assign roles
             for (const roleName of userData.roles) {
                 const roleResponse = await axios.get(
-                    `https://tdr-keycloak.loca.lt/admin/realms/tdr/roles/${roleName}`,
+                    `${keycloakUrl}/admin/realms/tdr/roles/${roleName}`,
                     {
                         headers: { Authorization: `Bearer ${token}` }
                     }
                 );
 
                 await axios.post(
-                    `https://tdr-keycloak.loca.lt/admin/realms/tdr/users/${userId}/role-mappings/realm`,
+                    `${keycloakUrl}/admin/realms/tdr/users/${userId}/role-mappings/realm`,
                     [roleResponse.data],
                     {
                         headers: {
@@ -212,10 +210,10 @@ async function createUserIfNotExists(userData, token) {
     }
 }
 
-async function createRealmIfNotExists(token) {
+async function createRealmIfNotExists(token, keycloakUrl) {
     try {
         await axios.get(
-            'https://tdr-keycloak.loca.lt/admin/realms/tdr',
+            `${keycloakUrl}/admin/realms/tdr`,
             {
                 headers: { Authorization: `Bearer ${token}` }
             }
@@ -223,7 +221,7 @@ async function createRealmIfNotExists(token) {
     } catch (error) {
         if (error.response?.status === 404) {
             await axios.post(
-                'https://tdr-keycloak.loca.lt/admin/realms',
+                `${keycloakUrl}/admin/realms`,
                 {
                     realm: 'tdr',
                     enabled: true,
@@ -240,12 +238,12 @@ async function createRealmIfNotExists(token) {
     }
 }
 
-async function createClientIfNotExists(token) {
+async function createClientIfNotExists(token, keycloakUrl) {
     const CLIENT_SECRET = "WlCaSt6E2EJUcyIDkq64DhOWfzGCqk8m"; // Matching our .env.local
 
     try {
         await axios.get(
-            'https://tdr-keycloak.loca.lt/admin/realms/tdr/clients/nextjs',
+            `${keycloakUrl}/admin/realms/tdr/clients/nextjs`,
             {
                 headers: { Authorization: `Bearer ${token}` }
             }
@@ -254,7 +252,7 @@ async function createClientIfNotExists(token) {
         if (error.response?.status === 404) {
             // Create the client
             const createResponse = await axios.post(
-                'https://tdr-keycloak.loca.lt/admin/realms/tdr/clients',
+                `${keycloakUrl}/admin/realms/tdr/clients`,
                 {
                     clientId: 'nextjs',
                     enabled: true,
