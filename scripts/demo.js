@@ -22,43 +22,16 @@ docker.on('close', async (code) => {
     }
 
     console.log('Starting tunnels...');
-    // Start tunnels with retries if subdomain is taken
-    const maxRetries = 3;
-    let retryCount = 0;
-
-    async function startTunnels() {
-        try {
-            const services = spawn('npx', [
-                'concurrently',
-                '-n', 'keycloak-tunnel,nextjs-tunnel',
-                '-c', 'yellow,green',
-                'npx lt --port=8080 --subdomain=tdr-keycloak --local-host=localhost',
-                'npx lt --port=3000 --subdomain=tdr-nextjs --local-host=localhost'
-            ], {
-                stdio: 'inherit',
-                shell: true
-            });
-
-            services.on('error', async (error) => {
-                console.error('Failed to start services:', error);
-                if (retryCount < maxRetries) {
-                    retryCount++;
-                    console.log(`Retrying tunnel creation (attempt ${retryCount}/${maxRetries})...`);
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    startTunnels();
-                } else {
-                    console.error('Failed to create tunnels after multiple attempts');
-                    process.exit(1);
-                }
-            });
-
-            return services;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    const services = await startTunnels();
+    const services = spawn('npx', [
+        'concurrently',
+        '-n', 'keycloak-tunnel,nextjs-tunnel',
+        '-c', 'yellow,green',
+        'lt --port=8080 --subdomain=tdr-keycloak --local-host=localhost',
+        'lt --port=3000 --subdomain=tdr-nextjs --local-host=localhost'
+    ], {
+        stdio: 'inherit',
+        shell: true
+    });
 
     // Wait for tunnels to be ready
     console.log('Waiting for tunnels to stabilize...');
