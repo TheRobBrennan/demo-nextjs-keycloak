@@ -94,24 +94,41 @@ After setup, your services are available at:
 - Next.js App: https://tdr-nextjs.loca.lt
 - Keycloak Admin: https://tdr-keycloak.loca.lt/admin
 
+## Demo Scripts
+
+This project includes several scripts to help you run and manage the demo:
+
+### `npm run demo`
+The standard demo script that:
+- Starts Docker containers
+- Creates tunnels
+- Configures Keycloak
+- Launches Next.js
+
+### `npm run demo:build`
+A clean-slate version that:
+- Removes existing Docker containers and volumes
+- Deletes any existing .env.local
+- Removes existing node_modules
+- Performs fresh npm install
+- Runs complete demo setup
+Use this when you want to start completely fresh or if you're having issues.
+
+### `npm run demo:clean`
+Cleanup script that:
+- Stops all running tunnels
+- Removes Docker containers and volumes
+- Deletes .env.local
+- Cleans up temporary files
+Use this to completely reset your environment.
+
 ## Troubleshooting
 
-### Tunnel Disconnections
-If tunnels disconnect:
-- Stop the demo script (Ctrl+C)
-- Run `npm run demo` again
-
-### DNS Issues
-If you encounter DNS-related errors:
-- The demo script includes `--dns-result-order=ipv4first` flag
-- Try restarting the demo script
-- Check your internet connection
-
-### Login Problems
-If unable to log in:
-1. Verify Keycloak client settings match tunnel URLs
-2. Check browser console for CORS errors
-3. Clear browser cookies and try again
+If you encounter issues:
+1. Try `npm run demo:clean` followed by `npm run demo:build`
+2. Check if cloudflared is installed and running properly
+3. Ensure all ports (3000, 8080, 5432) are available
+4. Look for error messages in the console output
 
 ## Cleanup
 
