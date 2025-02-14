@@ -38,3 +38,7 @@ next-env.d.ts
 # postgres data
 postgres_db
 .env
+
+# Ignore uploaded files
+uploads/
+*.meta.json
