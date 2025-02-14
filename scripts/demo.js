@@ -5,36 +5,40 @@ const initializeKeycloak = require('./init-keycloak');
 const axios = require('axios');
 
 async function createTunnel(port, name) {
-    console.log(`Creating tunnel for ${name} (port ${port})...`);
+    console.log(`\n📡 Creating tunnel for ${name} (port ${port})...`);
 
     const maxRetries = 10;
     const baseDelay = 3000; // 3 seconds base delay
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            process.stdout.write(`\rAttempt ${attempt + 1}/${maxRetries} `);
+            console.log(`\n🔄 Attempt ${attempt + 1}/${maxRetries}`);
             const tunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${port}`]);
 
             // Create a promise that resolves with the tunnel URL
             const url = await new Promise((resolve, reject) => {
-                let dots = 0;
+                let timer = 0;
                 const loadingInterval = setInterval(() => {
-                    process.stdout.write('\r' + '⏳'.repeat(dots + 1));
-                    dots = (dots + 1) % 3;
-                }, 500);
+                    timer++;
+                    console.log(`\n⏳ Waiting for tunnel... ${timer}s`);
+                }, 1000);
 
                 tunnel.stdout.on('data', (data) => {
                     const output = data.toString();
                     const match = output.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
                     if (match) {
                         clearInterval(loadingInterval);
-                        process.stdout.write('\n');
                         resolve({ tunnel, url: match[0] });
                     }
                 });
 
                 tunnel.stderr.on('data', (data) => {
-                    console.error(`${name}:`, data.toString());
+                    const error = data.toString();
+                    if (error.includes('429 Too Many Requests')) {
+                        clearInterval(loadingInterval);
+                        reject(new Error('Rate limit hit'));
+                    }
+                    console.error(`${name}: ${error}`);
                 });
 
                 tunnel.on('close', (code) => {
@@ -45,17 +49,23 @@ async function createTunnel(port, name) {
                 });
             });
 
-            console.log(`✅ ${name} tunnel created at ${url.url}`);
+            console.log(`\n✅ ${name} tunnel created at ${url.url}`);
             return url;
         } catch (error) {
             const delay = baseDelay * Math.pow(2, attempt);
             const seconds = delay / 1000;
-            process.stdout.write(`\r❌ Failed. Waiting ${seconds}s before retry...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            console.log(`\n❌ Failed. Cooling down for ${seconds}s...`);
+
+            // Show countdown
+            for (let i = seconds; i > 0; i--) {
+                process.stdout.write(`\r⏰ ${i}s remaining...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            console.log('\n');
         }
     }
 
-    throw new Error(`Failed to create tunnel for ${name} after ${maxRetries} attempts`);
+    throw new Error(`\n💥 Failed to create tunnel for ${name} after ${maxRetries} attempts`);
 }
 
 // Start Docker services
