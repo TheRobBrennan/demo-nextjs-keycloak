@@ -61,14 +61,14 @@ async function waitForKeycloak() {
     await waitForPort('http://localhost:8080');
 
     console.log('Waiting for Keycloak tunnel to be ready...');
-    // Then wait for tunnel
+    // Then wait for tunnel using a known Keycloak endpoint
     const maxAttempts = 30;
     const delay = 2000;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
         try {
-            const response = await axios.get('https://tdr-keycloak.loca.lt/health');
+            const response = await axios.get('https://tdr-keycloak.loca.lt/realms/master/protocol/openid-connect/auth');
             if (response.status === 200) {
                 console.log('Keycloak tunnel is ready!');
                 return;
