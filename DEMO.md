@@ -22,7 +22,9 @@ Before starting the demo, ensure you have:
 - Node.js 16 or higher
 - Docker and Docker Compose
 - Git
-- Cloudflared (install from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
+- Cloudflared
+  - macOS users with Homebrew: `brew install cloudflared`
+  - Other platforms: Follow the [official installation guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
 
 You can verify your installations with:
 
@@ -31,6 +33,7 @@ node --version
 docker --version
 docker compose version
 git --version
+cloudflared --version
 ```
 
 ## Manual Setup Steps
