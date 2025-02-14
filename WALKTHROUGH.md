@@ -1,6 +1,6 @@
 # Interactive Walkthrough Guide
 
-After setting up the demo using the instructions in DEMO.md, this guide will walk you through testing and exploring the application's features.
+After setting up the demo using the instructions in [DEMO.md](DEMO.md), this guide will walk you through testing and exploring the application's features.
 
 ## 1. Initial Keycloak Setup
 
