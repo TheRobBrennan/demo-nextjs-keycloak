@@ -4,20 +4,24 @@ After setting up the demo using the instructions in [DEMO.md](DEMO.md), this gui
 
 ## 1. Initial Keycloak Setup
 
-First, let's set up Keycloak with some test roles and users:
+First, let's verify and complete the Keycloak configuration:
 
 1. Access Keycloak admin console at https://tdr-keycloak.loca.lt/admin
    - Username: `admin`
    - Password: `admin`
 
-2. Create roles:
-   - Go to "Roles" in the left sidebar
-   - Click "Create role"
-   - Create two roles:
-     * `system-admin`
-     * `researcher`
+2. Select the "tdr" realm from the dropdown in the top-left corner
 
-3. Create a test user:
+3. Verify/Create roles:
+   - Go to "Roles" in the left sidebar
+   - Check if `system-admin` and `researcher` roles exist
+   - If either is missing:
+     * Click "Create role"
+     * Name: `system-admin` or `researcher`
+     * Description: (optional) "System Administrator Role" or "Researcher Role"
+     * Click "Save"
+
+4. Create a test user:
    - Go to "Users" → "Add user"
    - Username: `testuser`
    - Email: `test@example.com`
@@ -25,13 +29,13 @@ First, let's set up Keycloak with some test roles and users:
    - Last Name: `User`
    - Click "Create"
    
-4. Set user password:
+5. Set user password:
    - Go to "Credentials" tab
    - Set password: `password123`
    - Disable "Temporary" toggle
    - Click "Save"
 
-5. Assign roles:
+6. Assign roles:
    - Go to "Role mappings" tab
    - Add both `system-admin` and `researcher` roles
 
