@@ -21,10 +21,12 @@ The system comes with two preconfigured users:
 ## 2. Initial Access
 
 When you run `npm run demo`, the script will:
-1. Start the Docker containers
-2. Create secure tunnels and display their URLs
-3. Configure Keycloak automatically
-4. Start the Next.js application
+1. Clean up any existing environment
+2. Remove previous Docker containers and tunnels
+3. Start fresh Docker containers
+4. Create secure tunnels and display their URLs
+5. Configure Keycloak automatically
+6. Start the Next.js application
 
 Take note of the URLs displayed in your console - they will be unique for each session.
 

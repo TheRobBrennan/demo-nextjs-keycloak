@@ -18,17 +18,17 @@ export const authOptions: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, account, profile }) {
-      // Initial sign in
-      if (account && profile) {
+    async jwt({ token, account }) {
+      if (account) {
         // Decode the access token to get the roles
-        const accessToken = account.access_token;
+        const accessToken = account.access_token!;
         const decodedToken = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
 
         return {
           ...token,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
+          idToken: account.id_token,
           roles: decodedToken.realm_access?.roles || []
         };
       }
@@ -38,16 +38,27 @@ export const authOptions: AuthOptions = {
       return {
         ...session,
         accessToken: token.accessToken,
+        idToken: token.idToken,
         roles: token.roles
       };
     }
   },
   events: {
-    async signIn({ user, account, profile, isNewUser }) {
-      console.log('Sign in success', { user, account, profile, isNewUser })
-    },
-    async signOut({ session, token }) {
-      console.log('Sign out success', { session, token })
+    async signOut({ token }) {
+      try {
+        const logoutUrl = `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout`;
+        const params = new URLSearchParams({
+          client_id: process.env.KEYCLOAK_CLIENT_ID!,
+          post_logout_redirect_uri: process.env.NEXTAUTH_URL,
+          access_token_hint: token.accessToken as string
+        });
+
+        await fetch(`${logoutUrl}?${params.toString()}`, {
+          method: 'GET'
+        });
+      } catch (error) {
+        console.error("Logout error:", error);
+      }
     }
   }
 };

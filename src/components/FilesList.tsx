@@ -41,6 +41,17 @@ export default function FilesList() {
     if (loading) return <div>Loading...</div>;
     if (error) return <div className="text-red-500">{error}</div>;
 
+    if (users.length === 0) {
+        return (
+            <div className="text-center p-8 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">No files have been uploaded yet.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                    Files uploaded by researchers will appear here.
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-4xl p-4 space-y-6">
             {users.map((user) => (
