@@ -12,7 +12,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "demo": "node scripts/demo.js"
+    "demo": "node scripts/demo.js",
+    "demo:build": "node scripts/demo-build.js"
   },
   "dependencies": {
     "@types/node": "20.8.7",
