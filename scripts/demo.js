@@ -9,13 +9,22 @@ async function createTunnel(port, name) {
     console.log(`📡 Creating tunnel for ${name} (port ${port})...`);
 
     const maxRetries = 15;
-    const baseDelay = 5000;
-
-    // Options for pretty-ms to round to seconds
+    const baseDelay = 15000;
     const timeFormatOptions = {
         secondsDecimalDigits: 0,
         millisecondsDecimalDigits: 0
     };
+
+    if (global.lastTunnelCreation) {
+        const timeSinceLastTunnel = Date.now() - global.lastTunnelCreation;
+        const minimumGap = 10000;
+
+        if (timeSinceLastTunnel < minimumGap) {
+            const waitTime = minimumGap - timeSinceLastTunnel;
+            console.log(`\n⏳ Waiting ${prettyMilliseconds(waitTime, timeFormatOptions)} before creating next tunnel...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+    }
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -41,7 +50,8 @@ async function createTunnel(port, name) {
                         const urlMatch = error.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
                         if (urlMatch) {
                             clearInterval(loadingInterval);
-                            console.log(''); // Clean line
+                            console.log('');
+                            global.lastTunnelCreation = Date.now();
                             resolve({ tunnel, url: urlMatch[0] });
                             return;
                         }
@@ -70,12 +80,11 @@ async function createTunnel(port, name) {
             console.log(`✅ ${name} tunnel created at ${url.url}`);
             return url;
         } catch (error) {
-            const delay = baseDelay * Math.pow(3, attempt);
+            const delay = baseDelay * Math.pow(4, attempt);
 
             if (attempt + 1 < maxRetries) {
                 console.log(`\n🕐 Cooling down for ${prettyMilliseconds(delay, timeFormatOptions)} (attempt ${attempt + 1}/${maxRetries})`);
 
-                // Show countdown
                 const startTime = Date.now();
                 const endTime = startTime + delay;
 
