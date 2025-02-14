@@ -1,6 +1,52 @@
-## Blog
-This repository is a part of a blog which explains how to use keycloak as a authentication broker for a NextJS v13 application. Please go through this [blog](https://medium.com/@harshbhandariv/secure-nextjs-v13-application-with-keycloak-6f68406bb3b5)
+# NextJS + Keycloak Demo
 
+This repository demonstrates how to use Keycloak as an authentication broker for a Next.js v13 application.
+
+## Quick Start
+
+```bash
+npm run demo
+```
+
+This will automatically:
+- Set up the environment
+- Start Docker containers (Keycloak + Postgres)
+- Create secure tunnels for external access
+- Configure Keycloak
+- Launch the Next.js application
+
+## Prerequisites
+
+1. Node.js 16 or higher
+2. Docker and Docker Compose
+3. Cloudflared
+   - macOS users with Homebrew: `brew install cloudflared`
+   - Other platforms: [Installation Guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/)
+
+## Manual Setup
+
+For detailed setup instructions, see:
+- [Demo Guide](DEMO.md) - Quick start and basic setup
+- [Keycloak Setup](KEYCLOAK_SETUP.md) - Detailed Keycloak configuration
+- [Walkthrough](WALKTHROUGH.md) - Step-by-step feature exploration
+
+## Development
+
+```bash
+# Start in development mode
+npm run dev
+
+# Build for production
+npm run build
+
+# Start in production mode
+npm start
+```
+
+> Note: For local development without tunnels, set appropriate environment variables in `.env.local`
+
+## Blog Post
+For a detailed explanation, check out our [blog post](https://medium.com/@harshbhandariv/secure-nextjs-v13-application-with-keycloak-6f68406bb3b5)
 
 ## Getting Started
 
